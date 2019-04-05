@@ -10,7 +10,7 @@ key_length 	=128
 .align 32
 
 .data		
-s_box:	.octa 	0x76abd7fe2b670130c56f6bf27b777c63 
+s_box:		.octa 	0x76abd7fe2b670130c56f6bf27b777c63 
 		.octa	0xc072a49cafa2d4adf04759fa7dc982ca 
 		.octa	0x1531d871f1e5a534ccf73f362693fdb7
 		.octa	0x75b227ebe28012079a059618c323c704
@@ -26,6 +26,9 @@ s_box:	.octa 	0x76abd7fe2b670130c56f6bf27b777c63
 		.octa	0x9e1dc186b95735610ef6034866b53e70
 		.octa	0xdf2855cee9871e9b948ed9691198f8e1
 		.octa	0x16bb54b00f2d99416842e6bf0d89a18c
+
+		#zapisane są bajtowo od tyłu, żeby w pamięci były po kolei bo to jest upośledzone i sie od tyłu układa
+
 		
 .bss
 	.comm KEY, 16		#128bit 
@@ -33,19 +36,23 @@ s_box:	.octa 	0x76abd7fe2b670130c56f6bf27b777c63
 .text
 
 #s_box	=	637c777bf26b6fc53001672bfed7ab76 ca82c97dfa5947f0add4a2af9ca472c0 b7fd9326363ff7cc34a5e5f171d83115 
-#			04c723c31896059a071280e2eb27b275 09832c1a1b6e5aa0523bd6b329e32f84 53d100ed20fcb15b6acbbe394a4c58cf 
-#			d0efaafb434d338545f9027f503c9fa8 51a3408f929d38f5bcb6da2110fff3d2 cd0c13ec5f974417c4a77e3d645d1973 
-#			60814fdc222a908846eeb814de5e0bdb e0323a0a4906245cc2d3ac629195e479 e7c8376d8dd54ea96c56f4ea657aae08 
-#			ba78252e1ca6b4c6e8dd741f4bbd8b8a 703eb5664803f60e613557b986c11d9e e1f8981169d98e949b1e87e9ce5528df
-#			8ca1890dbfe6426841992d0fb054bb16
+#		04c723c31896059a071280e2eb27b275 09832c1a1b6e5aa0523bd6b329e32f84 53d100ed20fcb15b6acbbe394a4c58cf 
+#		d0efaafb434d338545f9027f503c9fa8 51a3408f929d38f5bcb6da2110fff3d2 cd0c13ec5f974417c4a77e3d645d1973 
+#		60814fdc222a908846eeb814de5e0bdb e0323a0a4906245cc2d3ac629195e479 e7c8376d8dd54ea96c56f4ea657aae08 
+#		ba78252e1ca6b4c6e8dd741f4bbd8b8a 703eb5664803f60e613557b986c11d9e e1f8981169d98e949b1e87e9ce5528df
+#		8ca1890dbfe6426841992d0fb054bb16
 
 .global _start
 _start:
+main:		
 	
-	mov %ebp , %edx
-	mov $SYSWRITE, %eax
-	mov $STDOUT, %ebx
-	mov $s_box, %ecx
+
+
+	mov $5 , %rdx
+	mov $SYSWRITE, %rax
+	mov $STDOUT, %rbx
+	mov $s_box, %rcx
+	add %r8, %rcx
 	
 	int $0x80
 
