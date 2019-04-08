@@ -6,14 +6,9 @@ STDOUT		=1
 EXIT_SUCCES	=0
 n	 	=16 #key length in bytes
 .align 32
-
-.data		
-
 		
 .bss
 	.comm key, 176		#176 bajtów dla 128bit klucz sekretnego 
-	.comm vector, 4
-
 
 .text
 s_box:	.octa 	0x76abd7fe2b670130c56f6bf27b777c63 
@@ -33,12 +28,12 @@ s_box:	.octa 	0x76abd7fe2b670130c56f6bf27b777c63
 	.octa	0xdf2855cee9871e9b948ed9691198f8e1
 	.octa	0x16bb54b00f2d99416842e6bf0d89a18c
 
-	#zapisane są bajtowo od tyłu, żeby w pamięci były po kolei bo to jest upośledzone i sie od tyłu układa
+	#zapisane są bajtowo od tyłu, żeby w pamięci były po kolei,bo sie od tyłu układa
 
 rcon:	.octa	0x009a4dabd86c361b8040201008040201
 
 
-SECRET_KEY:  	.octa 0x637c777bf26b6fc53001672bfed7ab76 #16 bajtów
+SECRET_KEY:  	.octa 0x637c777bf26b6fc53001672bfed7ab76 #16 bajtów przykladowy klucz prywatny
 	 	
 #s_box	=	637c777bf26b6fc53001672bfed7ab76 ca82c97dfa5947f0add4a2af9ca472c0 b7fd9326363ff7cc34a5e5f171d83115 
 #		04c723c31896059a071280e2eb27b275 09832c1a1b6e5aa0523bd6b329e32f84 53d100ed20fcb15b6acbbe394a4c58cf 
@@ -53,21 +48,22 @@ main:
 	mov $key, %r8	# r8 to wskaznik na koniec utworzonego kawałka klucza
 	add $n, %r8
 
-# 		poczatek rozszerzonego klucza to oryginalny klucz sekretny
+#0		poczatek rozszerzonego klucza to oryginalny klucz sekretny
 	movq SECRET_KEY, %rax
 	movq %rax, key
 	movq $8, %r9
 	movq SECRET_KEY(%r9), %rax
 	movq %rax, key(%r9)
 
-#		generacja klucza
-	mov $0, %r9	#r8 to numer iteracji liczymy od 0 nie jak na stronie
-#1.1
+	mov $0, %r9	#r9 to numer iteracji liczymy od 0 nie jak na stronie
+
+generation:
+#1 generacja kolejnych 4 bajtow		
+#1.1	
 	mov -4(%r8), %eax
-	mov %eax, vector
-#1.2
-	rol $8, %eax		
-#1.3
+#1.2	rotacja bajtow w "lewo" czyli w sumie w prawo
+	ror $8, %eax		
+#1.3	podstawienia rijndaela
 	mov $0, %ebx
 
 	movb %al, %bl
@@ -81,12 +77,43 @@ main:
 	movb %ah, %bl
 	mov s_box(%ebx), %ah
 	rol $16, %eax
-#1.4
-	rol $8, %eax
+
+#1.4	operacja rcon z najbardziej lewym bajtem
 	xor rcon(%r9), %al
-	ror $8, %eax
 #1.5
-	xor -n(%r8),%eax
+	mov -n(%r8),%ebx
+	xor %ebx, %eax
+	
+	#dodanie utworzonych 4 bajtow do klucza
+	mov %eax, (%r8)
+	add $4, %r8	
+#2	
+	mov -4(%r8), %eax
+	mov -n(%r8), %ebx
+	xor %ebx, %eax
+	mov %ebx, (%r8)
+	add $4, %r8
+
+	mov -4(%r8), %eax
+	mov -n(%r8), %ebx
+	xor %ebx, %eax
+	mov %eax, (%r8)
+	add $4, %r8
+
+	mov -4(%r8), %eax
+	mov -n(%r8), %ebx
+	xor %ebx, %eax
+	mov %eax, (%r8)
+	add $4, %r8
+
+#5	zwiekszenie numeru iteracji
+	
+	inc %r9
+	#porownanie ilosci iteracji	
+	cmp $10 , %r9
+	jne generation
+
+
 	
 koniec:
 	mov $SYSEXIT, %rax
