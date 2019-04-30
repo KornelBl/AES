@@ -61,8 +61,8 @@ generation:
 #1 generacja kolejnych 4 bajtow		
 #1.1	
 	mov -4(%r8), %eax
-#1.2	rotacja bajtow w "lewo" czyli w sumie w prawo
-	ror $8, %eax		
+#1.2	rotacja bajtow w lewo 
+	rol $8, %eax		
 #1.3	podstawienia rijndaela
 	mov $0, %ebx
 
@@ -79,7 +79,9 @@ generation:
 	rol $16, %eax
 
 #1.4	operacja rcon z najbardziej lewym bajtem
+	rol $8, %eax
 	xor rcon(%r9), %al
+	ror $8, %eax
 #1.5
 	mov -n(%r8),%ebx
 	xor %ebx, %eax
@@ -91,7 +93,7 @@ generation:
 	mov -4(%r8), %eax
 	mov -n(%r8), %ebx
 	xor %ebx, %eax
-	mov %ebx, (%r8)
+	mov %eax, (%r8)
 	add $4, %r8
 
 	mov -4(%r8), %eax
