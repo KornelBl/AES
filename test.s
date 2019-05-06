@@ -6,11 +6,22 @@ STDOUT		=1
 EXIT_SUCCES	=0
 n	 	=16 #key length in bytes
 .align 32
+
+.data
+raw_data:
+	.int 0x00112233
+	.int 0x44556677
+	.int 0x8899aabb
+	.int 0xccddeeff
+
+
 		
 .bss
 	.comm key, 176		#176 bajtów dla 128bit klucz sekretnego 
+	.comm coded_data, 16
 
 .text
+
 s_box:	.octa 	0x76abd7fe2b670130c56f6bf27b777c63 
 	.octa	0xc072a49cafa2d4adf04759fa7dc982ca 
 	.octa	0x1531d871f1e5a534ccf73f362693fdb7
@@ -55,7 +66,7 @@ main:
 	movq SECRET_KEY(%r9), %rax
 	movq %rax, key(%r9)
 
-	mov $0, %r9	#r9 to numer iteracji liczymy od 0 nie jak na stronie
+	xor %r9, %r9	#r9 to numer iteracji liczymy od 0 nie jak na stronie
 
 generation:
 #1 generacja kolejnych 4 bajtow		
@@ -64,7 +75,7 @@ generation:
 #1.2	rotacja bajtow w lewo 
 	rol $8, %eax		
 #1.3	podstawienia rijndaela
-	mov $0, %ebx
+	xor %ebx, %ebx
 
 	movb %al, %bl
 	mov s_box(%ebx), %al
@@ -106,7 +117,7 @@ generation:
 	mov -n(%r8), %ebx
 	xor %ebx, %eax
 	mov %eax, (%r8)
-	add $4, %r8
+	aqdd $4, %r8
 
 #5	zwiekszenie numeru iteracji
 	
@@ -114,7 +125,97 @@ generation:
 	#porownanie ilosci iteracji	
 	cmp $10 , %r9
 	jne generation
+#---------------------SZYFROWANIE-------------------
+#EAX EBX ECX EDX to dane
+poczatek_szyfrowania:
+		
+		
+#2 	
+	mov $raw_data, %r8	
+	movl (%r8), %eax
+	add $4, %r8
+	movl (%r8), %ebx
+	add $4, %r8
+	movl (%r8), %ecx
+	add $4, %r8
+	movl (%r8), %edx
 
+	mov $key, %r8 #r8 to wskaznik na czesc klucza ktora aktualnie uzywamy
+		
+	xorl (%r8), %eax
+	add $4, %r8
+	xorl (%r8), %ebx
+	add $4, %r8	
+	xorl (%r8), %ecx
+	add $4, %r8	
+	xorl (%r8), %edx
+	add $4, %r8		
+	
+szyfrowanie:
+#3	
+#3.1
+	xor %r9, %r9
+
+	movb %al, %r9b
+	mov s_box(%r9), %al
+	ror $8, %eax
+	movb %al, %r9b
+	mov s_box(%r9), %al
+	ror $8, %eax
+	movb %al, %r9b
+	mov s_box(%r9), %al
+	ror $8, %eax
+	movb %al, %r9b
+	mov s_box(%r9), %al
+	ror $8, %eax
+
+
+	movb %bl, %r9b
+	mov s_box(%r9), %bl
+	ror $8, %ebx
+	movb %bl, %r9b
+	mov s_box(%r9), %bl
+	ror $8, %ebx
+	movb %bl, %r9b
+	mov s_box(%r9), %bl
+	ror $8, %ebx
+	movb %bl, %r9b
+	mov s_box(%r9), %bl
+	ror $8, %eax
+
+
+	movb %cl, %r9b
+	mov s_box(%r9), %cl
+	ror $8, %ecx
+	movb %cl, %r9b
+	mov s_box(%r9), %cl
+	ror $8, %ecx
+	movb %cl, %r9b
+	mov s_box(%r9), %cl
+	ror $8, %ecx
+	movb %cl, %r9b
+	mov s_box(%r9), %cl
+	ror $8, %ecx
+
+
+	movb %dl, %r9b
+	mov s_box(%r9), %dl
+	ror $8, %edx
+	movb %dl, %r9b
+	mov s_box(%r9), %dl
+	ror $8, %edx
+	movb %dl, %r9b
+	mov s_box(%r9), %dl
+	ror $8, %edx
+	movb %dl, %r9b
+	mov s_box(%r9), %dl
+	ror $8, %edx
+
+
+
+	
+
+	
 
 	
 koniec:
