@@ -9,12 +9,18 @@ n	 	=16 #key length in bytes
 
 .data
 raw_data:
-	.int 0x01010101
-	.int 0x455313db
-	.int 0xc6c6c6c6
-	.int 0x5c220af2
+	.int 0xa8f64332
+	.int 0x8d305a88
+	.int 0xa2983131
+	.int 0x340737e0
 
+SECRET_KEY: #16 bajtów przykladowy klucz prywatny
+	.int 0x16157e2b
+	.int 0xa6d2ae28
+	.int 0x8815f7ab
+	.int 0x3c4fcf09
 
+	
 		
 .bss
 	.comm key, 176		#176 bajtów dla 128bit klucz sekretnego 
@@ -82,7 +88,6 @@ mul_by_3:
 rcon:	.octa	0x009a4dabd86c361b8040201008040201
 
 
-SECRET_KEY:  	.octa 0x637c777bf26b6fc53001672bfed7ab76 #16 bajtów przykladowy klucz prywatny
 	 	
 #s_box	=	637c777bf26b6fc53001672bfed7ab76 ca82c97dfa5947f0add4a2af9ca472c0 b7fd9326363ff7cc34a5e5f171d83115 
 #		04c723c31896059a071280e2eb27b275 09832c1a1b6e5aa0523bd6b329e32f84 53d100ed20fcb15b6acbbe394a4c58cf 
@@ -111,7 +116,7 @@ generation:
 #1.1	
 	mov -4(%r8), %eax
 #1.2	rotacja bajtow w lewo 
-	rol $8, %eax		
+	ror $8, %eax		
 #1.3	podstawienia rijndaela
 	xor %ebx, %ebx
 
@@ -128,14 +133,13 @@ generation:
 	rol $16, %eax
 
 #1.4	operacja rcon z najbardziej lewym bajtem
-	rol $8, %eax
 	xor rcon(%r9), %al
-	ror $8, %eax
 #1.5
 	mov -n(%r8),%ebx
 	xor %ebx, %eax
-	
-	#dodanie utworzonych 4 bajtow do klucza
+
+pierwsza_kolumna:
+	#dopisanie utworzonych 4 bajtow do klucza
 	mov %eax, (%r8)
 	add $4, %r8	
 #2	
@@ -167,19 +171,21 @@ generation:
 #EAX EBX ECX EDX to dane
 poczatek_szyfrowania:
 		
-	call wczytanie_128b		
-#2 	
-	mov $input_data, %r8	
-	movl (%r8), %eax
-	add $4, %r8
-	movl (%r8), %ebx
-	add $4, %r8
-	movl (%r8), %ecx
-	add $4, %r8
-	movl (%r8), %edx
+	call wczytanie_128b	
+	call wypis_128b	
 
+	mov $raw_data, %ebp	
 	mov $key, %r8 #r8 to wskaznik na czesc klucza ktora aktualnie uzywamy
-		
+	mov $10, %esi #licznik rund
+
+szyfrowanie:
+#2 	
+
+	movl (%ebp), %eax
+	movl 4(%ebp), %ebx
+	movl 8(%ebp), %ecx
+	movl 12(%ebp), %edx
+	
 	xorl (%r8), %eax
 	add $4, %r8
 	xorl (%r8), %ebx
@@ -189,22 +195,21 @@ poczatek_szyfrowania:
 	xorl (%r8), %edx
 	add $4, %r8		
 	
-szyfrowanie:
 #3	
 #3.1	Substitute Bytes
 	xor %r9, %r9
-
+	
 	movb %al, %r9b
-	mov s_box(%r9), %al
+	movb s_box(%r9), %al
 	ror $8, %eax
 	movb %al, %r9b
-	mov s_box(%r9), %al
+	movb s_box(%r9), %al
 	ror $8, %eax
 	movb %al, %r9b
-	mov s_box(%r9), %al
+	movb s_box(%r9), %al
 	ror $8, %eax
 	movb %al, %r9b
-	mov s_box(%r9), %al
+	movb s_box(%r9), %al
 	ror $8, %eax
 
 
@@ -219,7 +224,7 @@ szyfrowanie:
 	ror $8, %ebx
 	movb %bl, %r9b
 	mov s_box(%r9), %bl
-	ror $8, %eax
+	ror $8, %ebx
 
 
 	movb %cl, %r9b
@@ -250,6 +255,7 @@ szyfrowanie:
 	ror $8, %edx
 
 #3.2 Shift Rows
+shift_rows:
 	xor %r9, %r9	#3.2
 
 	ror $8, %eax
@@ -295,8 +301,13 @@ szyfrowanie:
 	mov %ebx, 4(%ebp)
 	mov %ecx, 8(%ebp)
 	mov %edx, 12(%ebp)
- 
+	
+	dec %esi
+	cmp $0, %esi
+	je skip_mix_columns
+
 #3.3 Mix Columns
+mix_columns:
 	xor %r9,%r9
 	xor %ebx, %ebx
 	xor %ecx, %ecx
@@ -331,10 +342,29 @@ mix_byte:
 	cmp $0 , %cx
 	jnz mix_column
 	
-
+	sub $16 , %ebp
+	jmp szyfrowanie
 	
+skip_mix_columns:
 	
+	movl (%ebp), %eax
+	movl 4(%ebp), %ebx
+	movl 8(%ebp), %ecx
+	movl 12(%ebp), %edx
 	
+	xorl (%r8), %eax
+	add $4, %r8
+	xorl (%r8), %ebx
+	add $4, %r8	
+	xorl (%r8), %ecx
+	add $4, %r8	
+	xorl (%r8), %edx
+	add $4, %r8	
+	
+	movl %eax, (%ebp)
+	movl %ebx, 4(%ebp)
+	movl %ecx, 8(%ebp)
+	movl %edx, 12(%ebp)
 
 	
 koniec:
@@ -351,3 +381,11 @@ wczytanie_128b:
 	int $0x80
 
 	ret	
+
+wypis_128b:
+	mov $SYSWRITE, %rax
+	mov $STDOUT, %rbx
+	mov $input_data, %rcx
+	mov $16, %rdx		
+	int $0x80
+	ret
